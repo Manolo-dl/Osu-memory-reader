@@ -33,13 +33,26 @@ The reader runs nothing in the background: call `beatmap()` every 100–500 ms a
 ```sh
 cargo run --release --example watch
 cargo run --release --example watch -- --once
+cargo run --release --example watch --features difficulty   # also stars, BPM and keys
 ```
 
 Build the full API documentation with `cargo doc --open --all-features`.
 
 ## Features
 
-- `serde`: `Serialize`/`Deserialize` on `Beatmap`, `BeatmapPaths`, `Ruleset` and `RankedStatus`, with camelCase fields (`rankedStatus`, `backgroundFilename`, ...).
+- `serde`: `Serialize`/`Deserialize` on all public data types, with camelCase fields (`rankedStatus`, `backgroundFilename`, ...).
+- `difficulty`: adds `attributes(&paths, mode)`, which parses the `.osu` file with [rosu-pp](https://crates.io/crates/rosu-pp) to get:
+  - the star rating without mods, in the selected mode (converting osu!standard maps when needed);
+  - the BPM: most common, minimum and maximum;
+  - the original mode of the map (`beatmap.mode` is the mode selected in the game, not the map's);
+  - the key count when played in mania, including converts, where it depends on CS, OD and the objects, not just CS.
+
+  It parses the whole file, so call it when `checksum` changes, not on every poll. `attributes_from_path` does the same for any `.osu` file.
+
+```rust
+let attrs = osu_memory_reader::attributes(&paths, beatmap.mode)?;
+println!("{:.2}*  {:.0} BPM  {:?} keys", attrs.stars, attrs.bpm.common, attrs.key_count);
+```
 
 ## Tauri example
 

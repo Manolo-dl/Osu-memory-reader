@@ -51,10 +51,15 @@
 //! - `serde`: derives `Serialize` and `Deserialize` on [`Beatmap`],
 //!   [`BeatmapPaths`], [`Ruleset`] and [`RankedStatus`]. Struct fields are
 //!   renamed to camelCase, which suits JavaScript frontends (e.g. Tauri).
+//! - `difficulty`: adds [`attributes`], which reads the `.osu` file with
+//!   [rosu-pp](https://docs.rs/rosu-pp) to get the star rating, BPM,
+//!   original mode and key count. Off by default to keep the reader light.
 
 #![warn(missing_docs)]
 
 mod beatmap;
+#[cfg(feature = "difficulty")]
+mod difficulty;
 mod error;
 mod paths;
 mod pattern;
@@ -65,6 +70,8 @@ use std::env;
 use std::path::PathBuf;
 
 pub use beatmap::{Beatmap, RankedStatus, Ruleset};
+#[cfg(feature = "difficulty")]
+pub use difficulty::{BeatmapAttributes, Bpm, attributes, attributes_from_path};
 pub use error::{Error, Result};
 pub use paths::BeatmapPaths;
 

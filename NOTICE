@@ -29,7 +29,8 @@ Origin of each file:
   src/process/linux.rs    packages/tsprocess/lib/memory/memory_linux.cc,
                           packages/tsprocess/src/process.ts
   src/process/windows.rs  packages/tsprocess/lib/memory/memory_windows.cc
-  src/lib.rs, src/error.rs, examples/watch.rs: new in this project.
+  src/lib.rs, src/error.rs, src/difficulty.rs, examples/watch.rs:
+                          new in this project.
 
 This project is licensed under the GNU Lesser General Public License version 3
 (LGPL-3.0-only). See COPYING.LESSER and COPYING.

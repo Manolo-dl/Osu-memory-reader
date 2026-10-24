@@ -6,6 +6,7 @@
 //! ```sh
 //! cargo run --release --example watch
 //! cargo run --release --example watch -- --once
+//! cargo run --release --example watch --features difficulty  # also stars, BPM, keys
 //! ```
 
 use std::path::Path;
@@ -53,7 +54,11 @@ fn watch(reader: &OsuReader, once: bool) {
             Ok(Some(beatmap)) if beatmap.checksum != last_checksum => {
                 print_beatmap(&beatmap);
                 match reader.beatmap_paths(&beatmap) {
-                    Ok(paths) => print_paths(&paths),
+                    Ok(paths) => {
+                        print_paths(&paths);
+                        #[cfg(feature = "difficulty")]
+                        print_attributes(&paths, &beatmap);
+                    }
                     Err(e) => eprintln!("could not resolve paths: {e}"),
                 }
                 println!();
@@ -76,6 +81,18 @@ fn print_beatmap(b: &Beatmap) {
     println!("  AR {:.1}  CS {:.1}  HP {:.1}  OD {:.1}  objects {}", b.ar, b.cs, b.hp, b.od, b.object_count);
     println!("  mode {mode}  {}  id {} / set {}", b.ranked_status, b.map_id, b.set_id);
     println!("  md5 {}", b.checksum);
+}
+
+#[cfg(feature = "difficulty")]
+fn print_attributes(paths: &BeatmapPaths, beatmap: &Beatmap) {
+    match osu_memory_reader::attributes(paths, beatmap.mode) {
+        Ok(a) => {
+            let keys = a.key_count.map_or(String::new(), |k| format!("  {k}K"));
+            println!("  {:.2}*  original mode {} -> {}{keys}", a.stars, a.original_mode, a.mode);
+            println!("  BPM {:.0} ({:.0}-{:.0})", a.bpm.common, a.bpm.min, a.bpm.max);
+        }
+        Err(e) => eprintln!("could not compute attributes: {e}"),
+    }
 }
 
 fn print_paths(p: &BeatmapPaths) {

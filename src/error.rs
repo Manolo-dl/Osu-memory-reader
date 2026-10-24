@@ -3,6 +3,7 @@
 
 use std::fmt;
 use std::io;
+use std::path::PathBuf;
 
 /// Errors returned by [`OsuReader`](crate::OsuReader).
 #[derive(Debug)]
@@ -51,6 +52,16 @@ pub enum Error {
     /// Set it with [`OsuReader::set_game_folder`](crate::OsuReader::set_game_folder)
     /// or the `OSU_PATH` environment variable.
     GameFolderNotFound,
+
+    /// The `.osu` file doesn't exist or couldn't be parsed. Only returned by
+    /// `attributes` (`difficulty` feature).
+    Parse {
+        /// Path of the `.osu` file.
+        path: PathBuf,
+        /// Underlying error; [`NotFound`](io::ErrorKind::NotFound) if the file
+        /// doesn't exist.
+        source: io::Error,
+    },
 }
 
 impl fmt::Display for Error {
@@ -63,6 +74,7 @@ impl fmt::Display for Error {
                 write!(f, "could not read {size} bytes at {address:#x}: {source}")
             }
             Self::GameFolderNotFound => write!(f, "could not determine the osu! installation folder"),
+            Self::Parse { path, source } => write!(f, "could not parse {}: {source}", path.display()),
         }
     }
 }
@@ -70,7 +82,9 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::OpenProcess { source, .. } | Self::ReadMemory { source, .. } => Some(source),
+            Self::OpenProcess { source, .. } | Self::ReadMemory { source, .. } | Self::Parse { source, .. } => {
+                Some(source)
+            }
             _ => None,
         }
     }

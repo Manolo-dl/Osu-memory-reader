@@ -14,8 +14,11 @@ categories = ["games", "os"]
 [features]
 ## Derives `Serialize`/`Deserialize` on the public data types (camelCase fields).
 serde = ["dep:serde"]
+## Star rating, BPM, original mode and key count from the `.osu` file (pulls in rosu-pp).
+difficulty = ["dep:rosu-pp"]
 
 [dependencies]
+rosu-pp = { version = "4.0.1", optional = true }
 serde = { version = "1.0.229", features = ["derive"], optional = true }
 
 [target."cfg(windows)".dependencies]

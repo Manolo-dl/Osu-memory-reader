@@ -125,7 +125,8 @@ impl fmt::Display for RankedStatus {
 #[non_exhaustive]
 pub struct Beatmap {
     /// Ruleset currently selected in the game. For converted maps this is the
-    /// target mode, not the map's original one.
+    /// target mode, not the map's original one; get that with `attributes`
+    /// (`difficulty` feature).
     pub mode: Option<Ruleset>,
     /// Artist (romanised).
     pub artist: String,

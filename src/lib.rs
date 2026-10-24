@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+
 //! Reads the selected beatmap and its files from a running **osu! stable**
 //! process, by reading the game's memory.
 //!

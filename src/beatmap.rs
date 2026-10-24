@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+//
+// Based on tosu v4.26.3 (https://github.com/tosuapp/tosu):
+//   packages/common/enums/osu.ts
+// Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
+// Modified in October 2026: ported from TypeScript to Rust.
+
 use std::fmt;
 
 #[cfg(feature = "serde")]

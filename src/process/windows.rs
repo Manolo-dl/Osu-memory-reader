@@ -1,3 +1,11 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+//
+// Based on tosu v4.26.3 (https://github.com/tosuapp/tosu):
+//   packages/tsprocess/lib/memory/memory_windows.cc
+// Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
+// Modified in October 2026: ported from C++ to Rust.
+
 //! Windows backend: Toolhelp snapshots, `ReadProcessMemory` and `VirtualQueryEx`.
 
 use std::ffi::c_void;

@@ -1,17 +1,17 @@
 # osu-memory-reader
 
-Crate de Rust que lee de la memoria de **osu! stable** el beatmap seleccionado y las rutas de sus archivos en disco (`.osu`, carpeta, bg y audio).
+A Rust crate that reads the selected beatmap and the paths of its files on disk (`.osu`, folder, background and audio) from the memory of a running **osu! stable** process.
 
-Es un port del lector de stable de [tosu](https://github.com/tosuapp/tosu), sin servidor: devuelve valores de Rust y tú decides qué hacer con ellos.
+It is a port of the stable reader in [tosu](https://github.com/tosuapp/tosu), without the server: it returns plain Rust values and you decide what to do with them.
 
-Funciona en Windows y en Linux (osu! bajo Wine, por ejemplo con osu-winello).
+Works on Windows and on Linux (osu! under Wine, for example with osu-winello).
 
-## Uso
+## Usage
 
 ```toml
 [dependencies]
-osu-memory-reader = { git = "https://github.com/<usuario>/osu-memory-reader" }
-# o, desarrollando ambos proyectos a la vez:
+osu-memory-reader = { git = "https://github.com/Manolo-dl/Osu-memory-reader" }
+# or, while working on both projects at once:
 # osu-memory-reader = { path = "../osu-memory-reader" }
 ```
 
@@ -28,22 +28,22 @@ if let Some(beatmap) = reader.beatmap()? {
 }
 ```
 
-El lector no corre nada en segundo plano: llama a `beatmap()` cada 100–500 ms y compara `checksum` para saber cuándo cambia el mapa. `examples/watch.rs` tiene un bucle completo que además espera a que osu! se abra y se reengancha si se cierra:
+The reader runs nothing in the background: call `beatmap()` every 100–500 ms and compare `checksum` to detect when the selection changes. `examples/watch.rs` has a complete loop that also waits for osu! to start and reattaches when it closes:
 
 ```sh
 cargo run --release --example watch
 cargo run --release --example watch -- --once
 ```
 
-La documentación completa de la API se genera con `cargo doc --open --all-features`.
+Build the full API documentation with `cargo doc --open --all-features`.
 
 ## Features
 
-- `serde`: `Serialize`/`Deserialize` en `Beatmap`, `BeatmapPaths`, `Ruleset` y `RankedStatus`, con los campos en camelCase (`rankedStatus`, `backgroundFilename`...).
+- `serde`: `Serialize`/`Deserialize` on `Beatmap`, `BeatmapPaths`, `Ruleset` and `RankedStatus`, with camelCase fields (`rankedStatus`, `backgroundFilename`, ...).
 
-## Ejemplo con Tauri
+## Tauri example
 
-Con la feature `serde`, un hilo que avisa al frontend cada vez que cambia el mapa:
+With the `serde` feature, a thread that notifies the frontend every time the beatmap changes:
 
 ```rust
 use std::{thread, time::Duration};
@@ -61,7 +61,7 @@ fn spawn_reader(app: tauri::AppHandle) {
         let reader = match OsuReader::attach() {
             Ok(reader) => reader,
             Err(_) => {
-                // osu! no está abierto o todavía está cargando.
+                // osu! is not running or is still loading.
                 thread::sleep(Duration::from_secs(2));
                 continue;
             }
@@ -82,18 +82,24 @@ fn spawn_reader(app: tauri::AppHandle) {
 }
 ```
 
-En el frontend: `listen("beatmap-changed", (e) => console.log(e.payload.beatmap.title))`.
+In the frontend: `listen("beatmap-changed", (e) => console.log(e.payload.beatmap.title))`.
 
-## Rutas
+## Paths
 
-- **Carpeta del juego:** se detecta sola. En Windows sale de la ruta de `osu!.exe`; en Linux, del directorio de trabajo del proceso o del `osupath` de osu-winello. Se puede forzar con `OsuReader::set_game_folder` o con la variable `OSU_PATH`.
-- **Carpeta Songs:** se lee de los ajustes de osu! (`BeatmapDirectory`). Si es relativa, se une a la carpeta del juego. Bajo Wine, las rutas tipo `D:\Songs` se traducen a la ruta real con los `dosdevices` del prefix.
+- **Game folder:** detected automatically. On Windows it comes from the path of `osu!.exe`; on Linux, from the process working directory or osu-winello's `osupath`. It can be overridden with `OsuReader::set_game_folder` or the `OSU_PATH` environment variable.
+- **Songs folder:** read from the osu! settings (`BeatmapDirectory`). If relative, it is joined to the game folder. Under Wine, paths like `D:\Songs` are translated to the real path through the prefix's `dosdevices`.
 
-## Permisos
+## Permissions
 
-- **Windows:** si osu! corre como administrador, el programa que lee también tiene que hacerlo.
-- **Linux:** según `ptrace_scope` del kernel puede hacer falta `sudo` o `sudo setcap cap_sys_ptrace=eip <binario>`.
+- **Windows:** if osu! runs as administrator, the reading program must too.
+- **Linux:** depending on the kernel's `ptrace_scope`, it may need `sudo` or `sudo setcap cap_sys_ptrace=eip <binary>`.
 
-## Licencia
+## License
 
-LGPL-3.0, igual que tosu, del que salen los offsets y patrones de memoria.
+Copyright (C) 2026 Manolo-dl
+
+Modified version of parts of [tosu](https://github.com/tosuapp/tosu) v4.26.3, Copyright (C) 2023-2026 Mikhail Babynichev and contributors, where the memory patterns and offsets come from. [NOTICE](NOTICE) lists where each file comes from and what was changed.
+
+This crate is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License version 3 (LGPL-3.0-only). See [COPYING.LESSER](COPYING.LESSER) and [COPYING](COPYING) (the GPL-3.0, which the LGPL builds on).
+
+Using it as a dependency does not require changing your project's license, but when you distribute a binary that includes it you must ship the LGPL-3.0 text with it, state that it uses this crate, and allow it to be replaced (for example, by publishing your project's source code).

@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+//
+// Based on tosu v4.26.3 (https://github.com/tosuapp/tosu):
+//   packages/tsprocess/lib/memory/memory.h
+//   packages/tsprocess/src/process.ts
+// Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
+// Modified in October 2026: ported from C++/TypeScript to Rust.
+
 //! Byte patterns like `"8B CE 83 3D ?? ?? ?? ?? 00"`.
 
 pub struct Pattern {
@@ -11,7 +20,7 @@ impl Pattern {
             .split_whitespace()
             .map(|b| match b {
                 "??" => None,
-                hex => Some(u8::from_str_radix(hex, 16).expect("byte inválido en patrón")),
+                hex => Some(u8::from_str_radix(hex, 16).expect("invalid byte in pattern")),
             })
             .collect();
         Self { bytes }

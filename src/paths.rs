@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+//
+// Based on tosu v4.26.3 (https://github.com/tosuapp/tosu):
+//   packages/tosu/src/instances/osuInstance.ts
+//   packages/tosu/src/states/beatmap.ts
+// Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
+// Modified in October 2026: ported from TypeScript to Rust.
+
 use std::path::PathBuf;
 
 #[cfg(feature = "serde")]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+
 //! Prints the selected beatmap and its paths every time it changes.
 //!
 //! ```sh

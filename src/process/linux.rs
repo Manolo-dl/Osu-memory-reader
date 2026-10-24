@@ -1,3 +1,13 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+//
+// Based on tosu v4.26.3 (https://github.com/tosuapp/tosu):
+//   packages/tsprocess/lib/memory/memory_linux.cc
+//   packages/tsprocess/src/process.ts
+// Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
+// Modified in October 2026: ported from C++/TypeScript to Rust; added Wine
+// drive translation for paths.
+
 //! Linux backend: `/proc` and `process_vm_readv`.
 
 use std::env;

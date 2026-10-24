@@ -1,3 +1,12 @@
+// SPDX-License-Identifier: LGPL-3.0-only
+// Copyright (C) 2026 Manolo-dl
+//
+// Based on tosu v4.26.3 (https://github.com/tosuapp/tosu):
+//   packages/tosu/src/memory/stable.ts
+// Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
+// Modified in October 2026: ported from TypeScript to Rust, reduced to the
+// beatmap and songs folder readers.
+
 //! osu! stable memory layout. Offsets and patterns ported from tosu
 //! (`packages/tosu/src/memory/stable.ts`).
 

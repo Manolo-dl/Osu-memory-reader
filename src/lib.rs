@@ -49,9 +49,10 @@
 //! # Features
 //!
 //! - `serde`: derives `Serialize` and `Deserialize` on [`Beatmap`],
-//!   [`BeatmapPaths`], [`Ruleset`] and [`RankedStatus`]. Struct fields are
-//!   renamed to camelCase, which suits JavaScript frontends (e.g. Tauri).
-//! - `difficulty`: adds [`attributes`], which reads the `.osu` file with
+//!   [`BeatmapPaths`], [`Ruleset`], [`RankedStatus`] and, with
+//!   `difficulty`, `BeatmapAttributes` and `Bpm`. Struct fields are renamed
+//!   to camelCase, which suits JavaScript frontends (e.g. Tauri).
+//! - `difficulty`: adds `attributes`, which reads the `.osu` file with
 //!   [rosu-pp](https://docs.rs/rosu-pp) to get the star rating, BPM,
 //!   original mode and key count. Off by default to keep the reader light.
 

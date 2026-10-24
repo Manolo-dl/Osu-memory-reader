@@ -10,9 +10,7 @@ Works on Windows and on Linux (osu! under Wine, for example with osu-winello).
 
 ```toml
 [dependencies]
-osu-memory-reader = { git = "https://github.com/Manolo-dl/Osu-memory-reader" }
-# or, while working on both projects at once:
-# osu-memory-reader = { path = "../osu-memory-reader" }
+osu-memory-reader = { version = "0.1", features = ["serde", "difficulty"] }
 ```
 
 ```rust

@@ -1,5 +1,7 @@
 # osu-memory-reader
 
+[![CI](https://github.com/Manolo-dl/Osu-memory-reader/actions/workflows/ci.yml/badge.svg)](https://github.com/Manolo-dl/Osu-memory-reader/actions/workflows/ci.yml)
+
 A Rust crate that reads the selected beatmap and the paths of its files on disk (`.osu`, folder, background and audio) from the memory of a running **osu! stable** process.
 
 It is a port of the stable reader in [tosu](https://github.com/tosuapp/tosu), without the server: it returns plain Rust values and you decide what to do with them.

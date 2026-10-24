@@ -18,8 +18,6 @@ use windows_sys::Win32::System::Threading::{
     QueryFullProcessImageNameW,
 };
 
-pub const PERMISSION_HINT: &str = "si osu! corre como administrador, ejecuta esto también como administrador";
-
 /// Finds processes whose executable name matches one of the names (case-insensitive).
 pub fn find(names: &[&str]) -> Vec<u32> {
     let mut pids = Vec::new();
@@ -141,6 +139,11 @@ impl Handle {
         regions
     }
 }
+
+// SAFETY: a process handle is just a kernel object reference; the Win32 calls
+// used here are safe to make from any thread.
+unsafe impl Send for Handle {}
+unsafe impl Sync for Handle {}
 
 impl Drop for Handle {
     fn drop(&mut self) {

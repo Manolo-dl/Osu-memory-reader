@@ -8,8 +8,6 @@ use std::path::PathBuf;
 
 use super::Region;
 
-pub const PERMISSION_HINT: &str = "prueba con sudo o setcap cap_sys_ptrace=eip";
-
 #[repr(C)]
 struct IoVec {
     base: *mut c_void,

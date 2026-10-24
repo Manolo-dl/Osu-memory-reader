@@ -1,28 +1,36 @@
-//! Resolves the beatmap files on disk, the same way tosu does: songs folder
-//! from the game settings, relative to the game folder unless it is absolute.
-
-use std::env;
 use std::path::PathBuf;
 
-use crate::process::Process;
-use crate::stable::Beatmap;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
+use crate::Beatmap;
+use crate::process::Process;
+
+/// Full paths on disk of the selected beatmap and the folders around it.
+///
+/// Paths are built from what the game reports and are not checked; a file
+/// can be missing if the beatmap was deleted from disk.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(rename_all = "camelCase"))]
+#[non_exhaustive]
 pub struct BeatmapPaths {
+    /// osu! installation folder.
     pub game: PathBuf,
+    /// Songs folder.
     pub songs: PathBuf,
+    /// Folder of the beatmap set.
     pub folder: PathBuf,
+    /// `.osu` file.
     pub osu: PathBuf,
+    /// Background image, if the beatmap has one.
     pub background: Option<PathBuf>,
+    /// Audio file, if the beatmap has one.
     pub audio: Option<PathBuf>,
 }
 
-/// Folder of the game. `OSU_PATH` overrides the detection.
-pub fn game_folder(process: &Process) -> Option<PathBuf> {
-    env::var_os("OSU_PATH").map(PathBuf::from).or_else(|| process.game_folder())
-}
-
-/// `raw_songs` is the songs folder read from memory; empty means the default `Songs`.
-pub fn resolve(process: &Process, game: PathBuf, raw_songs: &str, beatmap: &Beatmap) -> BeatmapPaths {
+/// Mirrors tosu: the songs folder comes from the game settings and is relative
+/// to the game folder unless it is absolute. `raw_songs` empty means `Songs`.
+pub(crate) fn resolve(process: &Process, game: PathBuf, raw_songs: &str, beatmap: &Beatmap) -> BeatmapPaths {
     let songs = match raw_songs.trim() {
         "" => game.join("Songs"),
         raw => {

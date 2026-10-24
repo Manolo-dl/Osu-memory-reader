@@ -3,11 +3,10 @@
 //! osu! stable is a 32-bit process (natively on Windows, under Wine on Linux),
 //! so pointers are 4 bytes wide.
 
-use std::fmt;
-use std::io;
 use std::path::PathBuf;
 
 use crate::pattern::Pattern;
+use crate::{Error, Result};
 
 #[cfg(target_os = "linux")]
 mod linux;
@@ -18,26 +17,6 @@ use linux as sys;
 mod windows;
 #[cfg(windows)]
 use windows as sys;
-
-/// Hint shown when the memory scan fails, usually because of missing permissions.
-pub const PERMISSION_HINT: &str = sys::PERMISSION_HINT;
-
-#[derive(Debug)]
-pub struct ReadError {
-    pub address: u64,
-    pub size: usize,
-    pub os: io::Error,
-}
-
-impl fmt::Display for ReadError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "no se pudo leer {:#x} ({} bytes): {}", self.address, self.size, self.os)
-    }
-}
-
-impl std::error::Error for ReadError {}
-
-pub type Result<T> = std::result::Result<T, ReadError>;
 
 pub struct Region {
     pub address: u64,
@@ -54,8 +33,9 @@ impl Process {
         sys::find(names)
     }
 
-    pub fn open(pid: u32) -> io::Result<Self> {
-        Ok(Self { handle: sys::Handle::open(pid)? })
+    pub fn open(pid: u32) -> Result<Self> {
+        let handle = sys::Handle::open(pid).map_err(|source| Error::OpenProcess { pid, source })?;
+        Ok(Self { handle })
     }
 
     pub fn is_alive(&self) -> bool {
@@ -74,7 +54,7 @@ impl Process {
     }
 
     pub fn read_into(&self, address: u64, buf: &mut [u8]) -> Result<()> {
-        self.handle.read(address, buf).map_err(|os| ReadError { address, size: buf.len(), os })
+        self.handle.read(address, buf).map_err(|source| Error::ReadMemory { address, size: buf.len(), source })
     }
 
     fn read_array<const N: usize>(&self, address: u64) -> Result<[u8; N]> {
@@ -135,15 +115,22 @@ impl Process {
 
     /// Searches for several patterns, reading each region only once.
     /// Returns, for each pattern, the address where its match starts.
-    pub fn scan_batch(&self, patterns: &[Pattern]) -> Vec<Option<u64>> {
+    ///
+    /// Fails only if no region could be read at all (typically missing
+    /// permissions); unreadable regions are otherwise skipped.
+    pub fn scan_batch(&self, patterns: &[Pattern]) -> Result<Vec<Option<u64>>> {
         let mut results = vec![None; patterns.len()];
         let mut buf = Vec::new();
+        let mut any_read = false;
+        let mut first_error = None;
 
         for region in self.regions() {
             buf.resize(region.size, 0);
-            if self.read_into(region.address, &mut buf).is_err() {
+            if let Err(e) = self.read_into(region.address, &mut buf) {
+                first_error.get_or_insert(e);
                 continue;
             }
+            any_read = true;
 
             for (pattern, result) in patterns.iter().zip(results.iter_mut()) {
                 if result.is_some() {
@@ -159,6 +146,9 @@ impl Process {
             }
         }
 
-        results
+        match first_error {
+            Some(e) if !any_read => Err(e),
+            _ => Ok(results),
+        }
     }
 }

@@ -5,6 +5,7 @@
 
 use std::fmt;
 use std::io;
+use std::path::PathBuf;
 
 use crate::pattern::Pattern;
 
@@ -59,6 +60,17 @@ impl Process {
 
     pub fn is_alive(&self) -> bool {
         self.handle.is_alive()
+    }
+
+    /// Folder where the game is installed (the one containing `osu!.exe`).
+    pub fn game_folder(&self) -> Option<PathBuf> {
+        self.handle.game_folder()
+    }
+
+    /// Converts a path as the game sees it into a path on this machine
+    /// (under Wine, `D:\Songs` becomes the real folder behind the `D:` drive).
+    pub fn host_path(&self, path: &str) -> PathBuf {
+        self.handle.host_path(path)
     }
 
     pub fn read_into(&self, address: u64, buf: &mut [u8]) -> Result<()> {

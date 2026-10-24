@@ -1,8 +1,10 @@
 //! Linux backend: `/proc` and `process_vm_readv`.
 
+use std::env;
 use std::ffi::c_void;
 use std::fs;
 use std::io;
+use std::path::PathBuf;
 
 use super::Region;
 
@@ -58,6 +60,54 @@ impl Handle {
 
     pub fn is_alive(&self) -> bool {
         fs::metadata(format!("/proc/{}", self.pid)).is_ok()
+    }
+
+    /// Wine starts osu! from its own folder, so the cwd is usually it. Otherwise
+    /// falls back to the path saved by osu-winello.
+    pub fn game_folder(&self) -> Option<PathBuf> {
+        let cwd = fs::read_link(format!("/proc/{}/cwd", self.pid)).ok();
+        if let Some(cwd) = &cwd
+            && cwd.join("osu!.exe").is_file()
+        {
+            return Some(cwd.clone());
+        }
+
+        let data_home = env::var_os("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .or_else(|| env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")));
+        if let Some(data_home) = data_home
+            && let Ok(osupath) = fs::read_to_string(data_home.join("osuconfig/osupath"))
+        {
+            return Some(PathBuf::from(osupath.trim()));
+        }
+
+        cwd
+    }
+
+    /// Translates `X:\...` through `<WINEPREFIX>/dosdevices/x:` and turns
+    /// backslashes into slashes.
+    pub fn host_path(&self, path: &str) -> PathBuf {
+        let bytes = path.as_bytes();
+        if bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' {
+            let drive = format!("{}:", (bytes[0] as char).to_ascii_lowercase());
+            let rest = path[2..].trim_start_matches(['\\', '/']).replace('\\', "/");
+            let device = self.wine_prefix().join("dosdevices").join(drive);
+            let root = fs::canonicalize(&device).unwrap_or(device);
+            return root.join(rest);
+        }
+
+        PathBuf::from(path.replace('\\', "/"))
+    }
+
+    /// `WINEPREFIX` from the game's environment, or Wine's default `~/.wine`.
+    fn wine_prefix(&self) -> PathBuf {
+        let environ = fs::read(format!("/proc/{}/environ", self.pid)).unwrap_or_default();
+        let prefix = environ
+            .split(|&b| b == 0)
+            .find_map(|var| var.strip_prefix(b"WINEPREFIX="))
+            .map(|value| PathBuf::from(String::from_utf8_lossy(value).into_owned()));
+
+        prefix.unwrap_or_else(|| PathBuf::from(env::var_os("HOME").unwrap_or_default()).join(".wine"))
     }
 
     pub fn read(&self, address: u64, buf: &mut [u8]) -> io::Result<()> {

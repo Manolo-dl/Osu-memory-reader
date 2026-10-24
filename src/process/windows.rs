@@ -3,6 +3,7 @@
 use std::ffi::c_void;
 use std::io;
 use std::mem::{size_of, zeroed};
+use std::path::PathBuf;
 
 use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE, STILL_ACTIVE};
 use windows_sys::Win32::System::Diagnostics::Debug::ReadProcessMemory;
@@ -13,7 +14,8 @@ use windows_sys::Win32::System::Memory::{
     MEM_COMMIT, MEMORY_BASIC_INFORMATION, PAGE_EXECUTE_READWRITE, PAGE_GUARD, PAGE_READWRITE, VirtualQueryEx,
 };
 use windows_sys::Win32::System::Threading::{
-    GetExitCodeProcess, OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
+    GetExitCodeProcess, OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ,
+    QueryFullProcessImageNameW,
 };
 
 pub const PERMISSION_HINT: &str = "si osu! corre como administrador, ejecuta esto también como administrador";
@@ -65,6 +67,24 @@ impl Handle {
     pub fn is_alive(&self) -> bool {
         let mut code = 0u32;
         unsafe { GetExitCodeProcess(self.0, &mut code) != 0 && code == STILL_ACTIVE as u32 }
+    }
+
+    /// Parent folder of the process executable.
+    pub fn game_folder(&self) -> Option<PathBuf> {
+        let mut buf = [0u16; 1024];
+        let mut len = buf.len() as u32;
+        let ok = unsafe { QueryFullProcessImageNameW(self.0, PROCESS_NAME_WIN32, buf.as_mut_ptr(), &mut len) };
+        if ok == 0 {
+            return None;
+        }
+
+        let exe = PathBuf::from(String::from_utf16_lossy(&buf[..len as usize]));
+        exe.parent().map(PathBuf::from)
+    }
+
+    /// Paths in memory are already native paths.
+    pub fn host_path(&self, path: &str) -> PathBuf {
+        PathBuf::from(path)
     }
 
     pub fn read(&self, address: u64, buf: &mut [u8]) -> io::Result<()> {

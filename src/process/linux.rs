@@ -150,7 +150,8 @@ impl Handle {
                 let (start, end) = range.split_once('-')?;
                 let start = u64::from_str_radix(start, 16).ok()?;
                 let end = u64::from_str_radix(end, 16).ok()?;
-                Some(Region { address: start, size: (end - start) as usize })
+                let executable = perms.as_bytes().get(2) == Some(&b'x');
+                Some(Region { address: start, size: (end - start) as usize, executable })
             })
             .collect()
     }

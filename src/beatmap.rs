@@ -3,13 +3,18 @@
 //
 // Based on tosu v4.26.3 (https://github.com/tosuapp/tosu):
 //   packages/common/enums/osu.ts
+//   packages/tosu/src/memory/stable.ts
 // Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
-// Modified in October 2026: ported from TypeScript to Rust.
+// Modified in October-November 2026: ported from TypeScript to Rust.
 
 use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+use crate::Result;
+use crate::process::Process;
+use crate::stable::{Addresses, Sig};
 
 /// Game mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -130,8 +135,12 @@ pub struct Beatmap {
     pub mode: Option<Ruleset>,
     /// Artist (romanised).
     pub artist: String,
+    /// Artist in its original language. Empty when the map doesn't set one.
+    pub artist_unicode: String,
     /// Title (romanised).
     pub title: String,
+    /// Title in its original language. Empty when the map doesn't set one.
+    pub title_unicode: String,
     /// Mapper.
     pub creator: String,
     /// Difficulty name.
@@ -163,4 +172,36 @@ pub struct Beatmap {
     /// MD5 of the `.osu` file. Changes when the selected beatmap changes, so
     /// it is a cheap way to detect a new selection.
     pub checksum: String,
+}
+
+pub(crate) fn read(p: &Process, a: &Addresses) -> Result<Option<Beatmap>> {
+    let base = a.get(p, Sig::Base)?;
+
+    let bm = p.read_ptr_ptr(base - 0xc)?;
+    if bm == 0 {
+        return Ok(None);
+    }
+
+    Ok(Some(Beatmap {
+        mode: Ruleset::from_id(p.read_ptr_ptr(base - 0x33)? as i32),
+        artist: p.read_cs_string_ptr(bm + 0x18)?,
+        artist_unicode: p.read_cs_string_ptr(bm + 0x1c)?,
+        title: p.read_cs_string_ptr(bm + 0x24)?,
+        title_unicode: p.read_cs_string_ptr(bm + 0x28)?,
+        ar: p.read_f32(bm + 0x2c)?,
+        cs: p.read_f32(bm + 0x30)?,
+        hp: p.read_f32(bm + 0x34)?,
+        od: p.read_f32(bm + 0x38)?,
+        audio_filename: p.read_cs_string_ptr(bm + 0x64)?,
+        background_filename: p.read_cs_string_ptr(bm + 0x68)?,
+        checksum: p.read_cs_string_ptr(bm + 0x6c)?,
+        folder: p.read_cs_string_ptr(bm + 0x78)?,
+        creator: p.read_cs_string_ptr(bm + 0x7c)?,
+        filename: p.read_cs_string_ptr(bm + 0x90)?,
+        difficulty: p.read_cs_string_ptr(bm + 0xac)?,
+        map_id: p.read_i32(bm + 0xc8)?,
+        set_id: p.read_i32(bm + 0xcc)?,
+        object_count: p.read_i32(bm + 0xf8)?,
+        ranked_status: RankedStatus::from_raw(p.read_i32(bm + 0x12c)?),
+    }))
 }

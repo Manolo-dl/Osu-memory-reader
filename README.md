@@ -12,7 +12,7 @@ Works on Windows and on Linux (osu! under Wine, for example with osu-winello).
 
 ```toml
 [dependencies]
-osu-memory-reader = { version = "0.1", features = ["serde", "difficulty"] }
+osu-memory-reader = { version = "0.2", features = ["serde", "difficulty"] }
 ```
 
 ```rust

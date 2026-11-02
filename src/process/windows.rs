@@ -135,7 +135,11 @@ impl Handle {
             let writable = info.Protect & (PAGE_READWRITE | PAGE_EXECUTE_READWRITE) != 0;
             let guarded = info.Protect & PAGE_GUARD != 0;
             if info.State == MEM_COMMIT && writable && !guarded {
-                regions.push(super::Region { address: info.BaseAddress as u64, size: info.RegionSize });
+                regions.push(super::Region {
+                    address: info.BaseAddress as u64,
+                    size: info.RegionSize,
+                    executable: info.Protect & PAGE_EXECUTE_READWRITE != 0,
+                });
             }
 
             match (info.BaseAddress as usize).checked_add(info.RegionSize) {

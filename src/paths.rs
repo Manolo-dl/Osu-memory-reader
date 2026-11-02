@@ -7,7 +7,7 @@
 // Copyright (C) 2023-2026 Mikhail Babynichev and contributors.
 // Modified in October 2026: ported from TypeScript to Rust.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -40,13 +40,7 @@ pub struct BeatmapPaths {
 /// Mirrors tosu: the songs folder comes from the game settings and is relative
 /// to the game folder unless it is absolute. `raw_songs` empty means `Songs`.
 pub(crate) fn resolve(process: &Process, game: PathBuf, raw_songs: &str, beatmap: &Beatmap) -> BeatmapPaths {
-    let songs = match raw_songs.trim() {
-        "" => game.join("Songs"),
-        raw => {
-            let path = process.host_path(raw);
-            if path.is_absolute() { path } else { game.join(path) }
-        }
-    };
+    let songs = songs_folder(process, &game, raw_songs);
 
     let folder = songs.join(process.host_path(&beatmap.folder));
     let file_in_folder = |name: &str| (!name.is_empty()).then(|| folder.join(process.host_path(name)));
@@ -58,5 +52,16 @@ pub(crate) fn resolve(process: &Process, game: PathBuf, raw_songs: &str, beatmap
         game,
         songs,
         folder,
+    }
+}
+
+/// `raw_songs` relative to `game` unless absolute; empty means `Songs`.
+pub(crate) fn songs_folder(process: &Process, game: &Path, raw_songs: &str) -> PathBuf {
+    match raw_songs.trim() {
+        "" => game.join("Songs"),
+        raw => {
+            let path = process.host_path(raw);
+            if path.is_absolute() { path } else { game.join(path) }
+        }
     }
 }

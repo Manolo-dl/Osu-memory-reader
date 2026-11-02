@@ -47,6 +47,16 @@ pub enum Error {
         source: io::Error,
     },
 
+    /// What was read doesn't make sense, because the game was moving that
+    /// object in memory at the time, so it was discarded.
+    ///
+    /// Happens for a moment, usually when entering or leaving a play; just
+    /// read again.
+    Inconsistent {
+        /// What was being read.
+        what: &'static str,
+    },
+
     /// The game installation folder could not be determined.
     ///
     /// Set it with [`OsuReader::set_game_folder`](crate::OsuReader::set_game_folder)
@@ -73,6 +83,7 @@ impl fmt::Display for Error {
             Self::ReadMemory { address, size, source } => {
                 write!(f, "could not read {size} bytes at {address:#x}: {source}")
             }
+            Self::Inconsistent { what } => write!(f, "the {what} changed in memory while it was being read"),
             Self::GameFolderNotFound => write!(f, "could not determine the osu! installation folder"),
             Self::Parse { path, source } => write!(f, "could not parse {}: {source}", path.display()),
         }

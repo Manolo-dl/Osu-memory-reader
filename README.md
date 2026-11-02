@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Manolo-dl/Osu-memory-reader/actions/workflows/ci.yml/badge.svg)](https://github.com/Manolo-dl/Osu-memory-reader/actions/workflows/ci.yml)
 
-A Rust crate that reads the selected beatmap and the paths of its files on disk (`.osu`, folder, background and audio) from the memory of a running **osu! stable** process.
+A Rust crate that reads live data from the memory of a running **osu! stable** process: the selected beatmap and its files on disk, the game state, the play in progress, results, leaderboard, user profile, settings and tournament client data.
 
 It is a port of the stable reader in [tosu](https://github.com/tosuapp/tosu), without the server: it returns plain Rust values and you decide what to do with them.
 
@@ -12,7 +12,7 @@ Works on Windows and on Linux (osu! under Wine, for example with osu-winello).
 
 ```toml
 [dependencies]
-osu-memory-reader = { version = "0.1", features = ["serde", "difficulty"] }
+osu-memory-reader = { version = "0.2", features = ["serde", "difficulty"] }
 ```
 
 ```rust
@@ -28,19 +28,66 @@ if let Some(beatmap) = reader.beatmap()? {
 }
 ```
 
-The reader runs nothing in the background: call `beatmap()` every 100–500 ms and compare `checksum` to detect when the selection changes. `examples/watch.rs` has a complete loop that also waits for osu! to start and reattaches when it closes:
+The reader runs nothing in the background: call the methods you need as often as you need them (every 100–500 ms is plenty for most data), and compare `checksum` to detect when the selected beatmap changes. Two examples:
 
 ```sh
-cargo run --release --example watch
-cargo run --release --example watch -- --once
-cargo run --release --example watch --features difficulty   # also stars, BPM and keys
+cargo run --release --example watch                          # prints the beatmap when it changes
+cargo run --release --example watch --features difficulty     # ...with stars, BPM and keys
+cargo run --release --example dump                            # calls every method once, with timings
 ```
+
+## What can be read
+
+Every piece of data has its own method on `OsuReader`, which reads only that from memory, so an app pays only for what it uses. Most take a few microseconds.
+
+| Method | Data | Available |
+|---|---|---|
+| `status()` | Current screen (`GameState`: menu, song select, play, results...) | Always |
+| `play_time()`, `game_time()` | Song position, game clock (ms) | Always |
+| `menu_mods()` | Mods selected in song select (`Mods`) | Always |
+| `beatmap()`, `beatmap_paths()`, `songs_folder()` | Selected beatmap, its files on disk | A beatmap is loaded |
+| `audio_length()` | Song length | A song is loaded |
+| `audio_spectrum()` | Live spectrum of the music (for `BassDensity`) | Main menu |
+| `user()` | Logged-in user: name, rank, pp, accuracy, country, Bancho status... | Always |
+| `gameplay()` | Score, accuracy, combo, judgements, HP, mods, retries | Playing (also replays and spectating) |
+| `key_overlay()` | K1/K2/M1/M2 pressed and counts | Playing (osu! and catch) |
+| `hit_errors(start)` | Timing errors, for hit error bars and unstable rate | Playing |
+| `leaderboard()` | In-game leaderboard and the player's position | Playing |
+| `result_screen()` | The finished score, with date and score id | Results screen |
+| `settings()` | Volume, offset, dim, resolution, skin, mania speed, keybinds... | Always |
+| `mania_scroll_speed()` | Scroll speed in use, including per-beatmap speeds | After playing mania once |
+| `skin_folder()`, `chat_status()`, `is_interface_visible()`, `is_watching_replay()`, `is_replay_ui_hidden()` | UI state | Always |
+| `tourney()`, `tourney_chat()` | Tournament manager: teams, stars, scores, `#multiplayer` chat | Tournament manager client |
+| `spectating_user()` | Player watched by a tournament spectator client | Tournament spectator clients |
+
+Methods tied to a screen check `status()` themselves and return `None` elsewhere, since the game reuses those objects for other screens.
+
+Helpers for what tosu computes on top of the raw values:
+
+```rust
+use osu_memory_reader::unstable_rate;
+
+if let (Some(play), Some(errors)) = (reader.gameplay()?, reader.hit_errors(0)?) {
+    if let Some(mode) = play.mode {
+        println!(
+            "{} {}x {:.2}% {}  UR {:.2}",
+            play.score,
+            play.combo,
+            play.hits.accuracy(mode, play.mods),
+            play.hits.grade(mode, play.mods),
+            unstable_rate(&errors, play.mods),
+        );
+    }
+}
+```
+
+To keep the hit errors of a play without rereading them, pass how many you already have: `reader.hit_errors(errors.len())` returns only the new ones.
 
 Build the full API documentation with `cargo doc --open --all-features`.
 
 ## Features
 
-- `serde`: `Serialize`/`Deserialize` on all public data types, with camelCase fields (`rankedStatus`, `backgroundFilename`, ...).
+- `serde`: `Serialize`/`Deserialize` on all public data types, with camelCase fields (`rankedStatus`, `backgroundFilename`, ...). Enums are their camelCase names (`"selectPlay"`), `Mods` is `{ "number": 72, "name": "HDDT" }` and keys are `{ "code": 90, "name": "Z" }`, close to tosu's JSON.
 - `difficulty`: adds `attributes(&paths, mode)`, which parses the `.osu` file with [rosu-pp](https://crates.io/crates/rosu-pp) to get:
   - the star rating without mods, in the selected mode (converting osu!standard maps when needed);
   - the BPM: most common, minimum and maximum;

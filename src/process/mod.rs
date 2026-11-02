@@ -31,6 +31,8 @@ use windows as sys;
 pub struct Region {
     pub address: u64,
     pub size: usize,
+    /// Also executable: where the .NET JIT puts compiled code.
+    pub executable: bool,
 }
 
 pub struct Process {
@@ -73,6 +75,26 @@ impl Process {
         Ok(buf)
     }
 
+    pub fn read_u8(&self, address: u64) -> Result<u8> {
+        self.read_array(address).map(u8::from_le_bytes)
+    }
+
+    pub fn read_bool(&self, address: u64) -> Result<bool> {
+        self.read_u8(address).map(|b| b != 0)
+    }
+
+    pub fn read_u16(&self, address: u64) -> Result<u16> {
+        self.read_array(address).map(u16::from_le_bytes)
+    }
+
+    pub fn read_i64(&self, address: u64) -> Result<i64> {
+        self.read_array(address).map(i64::from_le_bytes)
+    }
+
+    pub fn read_f64(&self, address: u64) -> Result<f64> {
+        self.read_array(address).map(f64::from_le_bytes)
+    }
+
     pub fn read_i32(&self, address: u64) -> Result<i32> {
         self.read_array(address).map(i32::from_le_bytes)
     }
@@ -83,6 +105,20 @@ impl Process {
 
     pub fn read_f32(&self, address: u64) -> Result<f32> {
         self.read_array(address).map(f32::from_le_bytes)
+    }
+
+    /// Reads `count` consecutive `i32` values in one call.
+    pub fn read_i32_slice(&self, address: u64, count: usize) -> Result<Vec<i32>> {
+        let mut buf = vec![0u8; count * 4];
+        self.read_into(address, &mut buf)?;
+        Ok(buf.as_chunks::<4>().0.iter().map(|&c| i32::from_le_bytes(c)).collect())
+    }
+
+    /// Reads `count` consecutive `f32` values in one call.
+    pub fn read_f32_slice(&self, address: u64, count: usize) -> Result<Vec<f32>> {
+        let mut buf = vec![0u8; count * 4];
+        self.read_into(address, &mut buf)?;
+        Ok(buf.as_chunks::<4>().0.iter().map(|&c| f32::from_le_bytes(c)).collect())
     }
 
     /// Reads a 32-bit pointer.
@@ -126,15 +162,26 @@ impl Process {
     /// Searches for several patterns, reading each region only once.
     /// Returns, for each pattern, the address where its match starts.
     ///
+    /// Executable regions are searched first, since signatures are JIT code;
+    /// with `code_only` the others are skipped, which reads about a third of
+    /// the memory.
+    ///
     /// Fails only if no region could be read at all (typically missing
     /// permissions); unreadable regions are otherwise skipped.
-    pub fn scan_batch(&self, patterns: &[Pattern]) -> Result<Vec<Option<u64>>> {
+    pub fn scan_batch(&self, patterns: &[Pattern], code_only: bool) -> Result<Vec<Option<u64>>> {
         let mut results = vec![None; patterns.len()];
         let mut buf = Vec::new();
         let mut any_read = false;
         let mut first_error = None;
 
-        for region in self.regions() {
+        let mut regions = self.regions();
+        if code_only {
+            regions.retain(|r| r.executable);
+        }
+        // Stable sort: executable regions first, each group in address order.
+        regions.sort_by_key(|r| !r.executable);
+
+        for region in regions {
             buf.resize(region.size, 0);
             if let Err(e) = self.read_into(region.address, &mut buf) {
                 first_error.get_or_insert(e);

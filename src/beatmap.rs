@@ -12,8 +12,8 @@ use std::fmt;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::Result;
 use crate::process::Process;
+use crate::{Error, Result};
 use crate::stable::{Addresses, Sig};
 
 /// Game mode.
@@ -182,7 +182,7 @@ pub(crate) fn read(p: &Process, a: &Addresses) -> Result<Option<Beatmap>> {
         return Ok(None);
     }
 
-    Ok(Some(Beatmap {
+    let beatmap = Beatmap {
         mode: Ruleset::from_id(p.read_ptr_ptr(base - 0x33)? as i32),
         artist: p.read_cs_string_ptr(bm + 0x18)?,
         artist_unicode: p.read_cs_string_ptr(bm + 0x1c)?,
@@ -203,5 +203,63 @@ pub(crate) fn read(p: &Process, a: &Addresses) -> Result<Option<Beatmap>> {
         set_id: p.read_i32(bm + 0xcc)?,
         object_count: p.read_i32(bm + 0xf8)?,
         ranked_status: RankedStatus::from_raw(p.read_i32(bm + 0x12c)?),
-    }))
+    };
+
+    // While the game moves objects in memory (entering or leaving a play, for
+    // example), the fields can point at other data for a moment.
+    if p.read_ptr_ptr(base - 0xc)? != bm || !beatmap.is_consistent() {
+        return Err(Error::Inconsistent { what: "beatmap" });
+    }
+    Ok(Some(beatmap))
+}
+
+impl Beatmap {
+    /// False for what the game shows for a moment while it moves or replaces
+    /// the object: no `.osu` file name (tosu ignores those too, often all
+    /// fields are empty), a checksum that isn't an MD5, or text with NUL
+    /// characters.
+    fn is_consistent(&self) -> bool {
+        let filename = self.filename.to_ascii_lowercase().ends_with(".osu");
+        let checksum = self.checksum.is_empty()
+            || (self.checksum.len() == 32 && self.checksum.bytes().all(|b| b.is_ascii_hexdigit()));
+        let texts = [
+            &self.artist,
+            &self.artist_unicode,
+            &self.title,
+            &self.title_unicode,
+            &self.creator,
+            &self.difficulty,
+            &self.folder,
+            &self.filename,
+            &self.audio_filename,
+            &self.background_filename,
+        ];
+        filename && checksum && texts.iter().all(|text| !text.contains('\0'))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn consistency() {
+        let valid = Beatmap {
+            title: "Lord=Crossight".into(),
+            difficulty: "6K ADVANCED".into(),
+            filename: "penoreri - Lord=Crossight (Shin) [6K ADVANCED].osu".into(),
+            checksum: "0123456789abcdef0123456789ABCDEF".into(),
+            ..Beatmap::default()
+        };
+        assert!(valid.is_consistent());
+        assert!(Beatmap { checksum: String::new(), ..valid.clone() }.is_consistent());
+
+        // Both seen live when entering or leaving a play: all fields empty, and
+        // text of another object.
+        assert!(!Beatmap::default().is_consistent());
+        assert!(!Beatmap { difficulty: "\0\0JudgementLine\0".into(), ..valid.clone() }.is_consistent());
+        assert!(!Beatmap { filename: "Lord=Crossight".into(), ..valid.clone() }.is_consistent());
+        assert!(!Beatmap { checksum: "0123456789abcdef".into(), ..valid.clone() }.is_consistent());
+        assert!(!Beatmap { checksum: "0123456789abcdef0123456789abcdeg".into(), ..valid }.is_consistent());
+    }
 }

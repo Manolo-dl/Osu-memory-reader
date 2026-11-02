@@ -46,7 +46,8 @@ Every piece of data has its own method on `OsuReader`, which reads only that fro
 | `play_time()`, `game_time()` | Song position, game clock (ms) | Always |
 | `menu_mods()` | Mods selected in song select (`Mods`) | Always |
 | `beatmap()`, `beatmap_paths()`, `songs_folder()` | Selected beatmap, its files on disk | A beatmap is loaded |
-| `audio_length()`, `audio_spectrum()` | Song length, live spectrum (for `BassDensity`) | A song is loaded |
+| `audio_length()` | Song length | A song is loaded |
+| `audio_spectrum()` | Live spectrum of the music (for `BassDensity`) | Main menu |
 | `user()` | Logged-in user: name, rank, pp, accuracy, country, Bancho status... | Always |
 | `gameplay()` | Score, accuracy, combo, judgements, HP, mods, retries | Playing (also replays and spectating) |
 | `key_overlay()` | K1/K2/M1/M2 pressed and counts | Playing (osu! and catch) |

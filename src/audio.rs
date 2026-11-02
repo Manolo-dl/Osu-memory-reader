@@ -9,12 +9,17 @@
 
 use crate::process::Process;
 use crate::stable::{self, Addresses};
-use crate::Result;
+use crate::state::is_on;
+use crate::{GameState, Result};
 
 /// Number of spectrum bands [`OsuReader::audio_spectrum`](crate::OsuReader::audio_spectrum) returns.
 pub const SPECTRUM_BANDS: usize = 40;
 
 pub(crate) fn read_spectrum(p: &Process, a: &Addresses) -> Result<Option<[f32; SPECTRUM_BANDS]>> {
+    // Only the main menu's object has the spectrum at this offset.
+    if !is_on(p, a, GameState::Menu)? {
+        return Ok(None);
+    }
     let ruleset = stable::ruleset(p, a)?;
     if ruleset == 0 {
         return Ok(None);

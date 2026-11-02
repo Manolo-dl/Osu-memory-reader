@@ -18,6 +18,8 @@ Modifications (October-November 2026):
   beatmap are required when attaching, and missing ones are searched again
   in executable memory when first needed.
 - Screen-specific readers check the game state before reading.
+- The beatmap is discarded when it was read while the game was moving it in
+  memory.
 - Added translation of Windows paths through Wine drive mappings on Linux.
 
 Origin of each file:

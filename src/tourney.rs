@@ -118,6 +118,11 @@ pub(crate) fn read(p: &Process, a: &Addresses) -> Result<Option<Tourney>> {
 const MAX_ITEMS: i32 = 100_000;
 
 pub(crate) fn read_chat(p: &Process, a: &Addresses) -> Result<Option<Vec<ChatMessage>>> {
+    // Also avoids searching for the signature, which only exists in the
+    // tournament manager, on every call from other clients.
+    if !is_on(p, a, GameState::Tourney)? {
+        return Ok(None);
+    }
     let channels = p.read_ptr_ptr(a.get(p, Sig::TourneyChat)? + 0x1)?;
     if channels == 0 {
         return Ok(None);

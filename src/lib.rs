@@ -42,7 +42,8 @@
 //! | [`play_time`](OsuReader::play_time), [`game_time`](OsuReader::game_time) | Song position, game clock | Always |
 //! | [`menu_mods`](OsuReader::menu_mods) | Mods selected in song select | Always |
 //! | [`beatmap`](OsuReader::beatmap), [`beatmap_paths`](OsuReader::beatmap_paths) | Selected beatmap and its files | A beatmap is loaded |
-//! | [`audio_length`](OsuReader::audio_length), [`audio_spectrum`](OsuReader::audio_spectrum) | Song length, live spectrum | A song is loaded |
+//! | [`audio_length`](OsuReader::audio_length) | Song length | A song is loaded |
+//! | [`audio_spectrum`](OsuReader::audio_spectrum) | Live spectrum of the music | [`GameState::Menu`] |
 //! | [`user`](OsuReader::user) | Logged-in user's profile | Always |
 //! | [`gameplay`](OsuReader::gameplay) | Score, combo, judgements, HP | [`GameState::Play`] |
 //! | [`key_overlay`](OsuReader::key_overlay), [`hit_errors`](OsuReader::hit_errors) | Key presses, timing errors | [`GameState::Play`] |
@@ -74,8 +75,9 @@
 //!
 //! # Errors
 //!
-//! [`Error::ReadMemory`] can happen for a moment while the game swaps objects
-//! in memory (e.g. while changing screens): read again.
+//! [`Error::ReadMemory`] and [`Error::Inconsistent`] can happen for a moment
+//! while the game moves objects in memory (e.g. while changing screens): read
+//! again.
 //! [`Error::PatternNotFound`] means the memory signature that method needs
 //! wasn't found: some only exist in certain clients (the tournament ones) or
 //! after the game has used that feature once. The next call that needs a
@@ -262,8 +264,10 @@ impl OsuReader {
     ///
     /// # Errors
     ///
-    /// [`Error::ReadMemory`] if the memory couldn't be read. This can happen
-    /// for a moment while the game changes beatmaps; read again.
+    /// [`Error::ReadMemory`] if the memory couldn't be read, or
+    /// [`Error::Inconsistent`] if the game was moving the beatmap in memory
+    /// and what was read is not valid. Both happen for a moment while the game
+    /// changes beatmaps or screens; read again.
     pub fn beatmap(&self) -> Result<Option<Beatmap>> {
         beatmap::read(&self.process, &self.addresses)
     }
@@ -322,6 +326,7 @@ impl OsuReader {
 
     /// Live spectrum of the music, in [`SPECTRUM_BANDS`] bands from low to
     /// high frequencies. Feed it to [`BassDensity`] for tosu's bass density.
+    /// `None` outside [`GameState::Menu`], the only screen that exposes it.
     pub fn audio_spectrum(&self) -> Result<Option<[f32; SPECTRUM_BANDS]>> {
         audio::read_spectrum(&self.process, &self.addresses)
     }
@@ -408,12 +413,9 @@ impl OsuReader {
         tourney::read(&self.process, &self.addresses)
     }
 
-    /// Messages of the `#multiplayer` channel in the tournament manager, or
-    /// `None` if it isn't open. Returns the whole channel each time.
-    ///
-    /// # Errors
-    ///
-    /// [`Error::PatternNotFound`] outside the tournament manager.
+    /// Messages of the `#multiplayer` channel in the tournament manager.
+    /// `None` outside [`GameState::Tourney`] or if the channel isn't open.
+    /// Returns the whole channel each time.
     pub fn tourney_chat(&self) -> Result<Option<Vec<ChatMessage>>> {
         tourney::read_chat(&self.process, &self.addresses)
     }

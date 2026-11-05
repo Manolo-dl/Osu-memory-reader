@@ -1,6 +1,6 @@
 [package]
 name = "osu-memory-reader"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 rust-version = "1.88"
 description = "Reads live data from a running osu! stable process: beatmap and its files, game state, gameplay, results, leaderboard, user, settings and tournament clients"

@@ -18,6 +18,7 @@ serde = ["dep:serde"]
 difficulty = ["dep:rosu-pp"]
 
 [dependencies]
+memchr = "2.8"
 rosu-pp = { version = "4.0.1", optional = true }
 serde = { version = "1.0.229", features = ["derive"], optional = true }
 

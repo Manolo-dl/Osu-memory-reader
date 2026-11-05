@@ -115,6 +115,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 name = "osu-memory-reader"
 version = "0.2.0"
 dependencies = [
+ "memchr",
  "rosu-pp",
  "serde",
  "serde_json",
